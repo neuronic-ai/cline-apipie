@@ -1,4 +1,4 @@
-# Cline (prev. Claude Dev) – \#1 on OpenRouter
+# Cline (prev. Claude Dev) – \ SUPER POWERED by [APIpie](https://APIpie.ai)
 
 <p align="center">
   <img src="https://media.githubusercontent.com/media/cline/cline/main/assets/docs/demo.gif" width="100%" />
@@ -44,7 +44,7 @@ Thanks to [Claude 3.5 Sonnet's agentic coding capabilities](https://www-cdn.ant
 
 ### Use any API and Model
 
-Cline supports API providers like OpenRouter, Anthropic, OpenAI, Google Gemini, AWS Bedrock, Azure, and GCP Vertex. You can also configure any OpenAI compatible API, or use a local model through LM Studio/Ollama. If you're using OpenRouter, the extension fetches their latest model list, allowing you to use the newest models as soon as they're available.
+Cline supports API providers like [APIpie.ai](https://apipie.ai), OpenRouter, Anthropic, OpenAI, Google Gemini, AWS Bedrock, Azure, and GCP Vertex. You can also configure any OpenAI compatible API, or use a local model through LM Studio/Ollama. If you're using [APIpie.ai](https://apipie.ai) or OpenRouter, the extension fetches their latest model list, allowing you to use the newest models as soon as they're available.
 
 The extension also keeps track of total tokens and API usage cost for the entire task loop and individual requests, keeping you informed of spend every step of the way.
 

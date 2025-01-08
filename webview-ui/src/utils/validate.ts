@@ -18,6 +18,11 @@ export function validateApiConfiguration(apiConfiguration?: ApiConfiguration): s
 					return "You must provide a valid API key or choose a different provider."
 				}
 				break
+			case "apipie":
+				if (!apiConfiguration.apipieApiKey) {
+					return "You must provide a valid API key or choose a different provider."
+				}
+				break						
 			case "vertex":
 				if (!apiConfiguration.vertexProjectId || !apiConfiguration.vertexRegion) {
 					return "You must provide a valid Google Cloud Project ID and Region."
@@ -38,9 +43,39 @@ export function validateApiConfiguration(apiConfiguration?: ApiConfiguration): s
 					return "You must provide a valid API key or choose a different provider."
 				}
 				break
+			case "xai":
+				if (!apiConfiguration.xaiApiKey) {
+					return "You must provide a valid API key or choose a different provider."
+				}
+				break
+			case "qwen":
+				if (!apiConfiguration.qwenApiKey) {
+					return "You must provide a valid API key or choose a different provider."
+				}
+				break
+			case "mistral":
+				if (!apiConfiguration.mistralApiKey) {
+					return "You must provide a valid API key or choose a different provider."
+				}
+				break
+			case "cline":
+				if (!apiConfiguration.clineApiKey) {
+					return "You must provide a valid API key or choose a different provider."
+				}
+				break
 			case "openai":
 				if (!apiConfiguration.openAiBaseUrl || !apiConfiguration.openAiApiKey || !apiConfiguration.openAiModelId) {
 					return "You must provide a valid base URL, API key, and model ID."
+				}
+				break
+			case "requesty":
+				if (!apiConfiguration.requestyApiKey || !apiConfiguration.requestyModelId) {
+					return "You must provide a valid API key or choose a different provider."
+				}
+				break
+			case "together":
+				if (!apiConfiguration.togetherApiKey || !apiConfiguration.togetherModelId) {
+					return "You must provide a valid API key or choose a different provider."
 				}
 				break
 			case "ollama":
@@ -51,6 +86,21 @@ export function validateApiConfiguration(apiConfiguration?: ApiConfiguration): s
 			case "lmstudio":
 				if (!apiConfiguration.lmStudioModelId) {
 					return "You must provide a valid model ID."
+				}
+				break
+			case "vscode-lm":
+				if (!apiConfiguration.vsCodeLmModelSelector) {
+					return "You must provide a valid model selector."
+				}
+				break
+			case "asksage":
+				if (!apiConfiguration.asksageApiKey) {
+					return "You must provide a valid API key or choose a different provider."
+				}
+				break
+			case "sambanova":
+				if (!apiConfiguration.sambanovaApiKey) {
+					return "You must provide a valid API key or choose a different provider."
 				}
 				break
 		}
@@ -65,6 +115,7 @@ export function validateModelId(
 	if (apiConfiguration) {
 		switch (apiConfiguration.apiProvider) {
 			case "openrouter":
+			case "cline":
 				const modelId = apiConfiguration.openRouterModelId || openRouterDefaultModelId // in case the user hasn't changed the model id, it will be undefined by default
 				if (!modelId) {
 					return "You must provide a model ID."

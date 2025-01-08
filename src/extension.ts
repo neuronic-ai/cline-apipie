@@ -3,9 +3,12 @@
 import delay from "delay"
 import * as vscode from "vscode"
 import { ClineProvider } from "./core/webview/ClineProvider"
+import { Logger } from "./services/logging/Logger"
 import { createClineAPI } from "./exports"
 import "./utils/path" // necessary to have access to String.prototype.toPosix
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
+import assert from "node:assert"
+import { telemetryService } from "./services/telemetry/TelemetryService"
 
 /*
 Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -24,7 +27,8 @@ export function activate(context: vscode.ExtensionContext) {
 	outputChannel = vscode.window.createOutputChannel("Cline")
 	context.subscriptions.push(outputChannel)
 
-	outputChannel.appendLine("Cline extension activated")
+	Logger.initialize(outputChannel)
+	Logger.log("Cline extension activated")
 
 	const sidebarProvider = new ClineProvider(context, outputChannel)
 
@@ -35,8 +39,8 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.plusButtonClicked", async () => {
-			outputChannel.appendLine("Plus button Clicked")
+		vscode.commands.registerCommand("cline-apipie.plusButtonClicked", async () => {
+			Logger.log("Plus button Clicked")
 			await sidebarProvider.clearTask()
 			await sidebarProvider.postStateToWebview()
 			await sidebarProvider.postMessageToWebview({
@@ -47,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.mcpButtonClicked", () => {
+		vscode.commands.registerCommand("cline-apipie.mcpButtonClicked", () => {
 			sidebarProvider.postMessageToWebview({
 				type: "action",
 				action: "mcpButtonClicked",
@@ -56,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	const openClineInNewTab = async () => {
-		outputChannel.appendLine("Opening Cline in new tab")
+		Logger.log("Opening Cline in new tab")
 		// (this example uses webviewProvider activation event which is necessary to deserialize cached webview, but since we use retainContextWhenHidden, we don't need to use that event)
 		// https://github.com/microsoft/vscode-extension-samples/blob/main/webview-sample/src/extension.ts
 		const tabProvider = new ClineProvider(context, outputChannel)
@@ -88,11 +92,11 @@ export function activate(context: vscode.ExtensionContext) {
 		await vscode.commands.executeCommand("workbench.action.lockEditorGroup")
 	}
 
-	context.subscriptions.push(vscode.commands.registerCommand("cline.popoutButtonClicked", openClineInNewTab))
-	context.subscriptions.push(vscode.commands.registerCommand("cline.openInNewTab", openClineInNewTab))
+	context.subscriptions.push(vscode.commands.registerCommand("cline-apipie.popoutButtonClicked", openClineInNewTab))
+	context.subscriptions.push(vscode.commands.registerCommand("cline-apipie.openInNewTab", openClineInNewTab))
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.settingsButtonClicked", () => {
+		vscode.commands.registerCommand("cline-apipie.settingsButtonClicked", () => {
 			//vscode.window.showInformationMessage(message)
 			sidebarProvider.postMessageToWebview({
 				type: "action",
@@ -102,10 +106,19 @@ export function activate(context: vscode.ExtensionContext) {
 	)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("cline.historyButtonClicked", () => {
+		vscode.commands.registerCommand("cline-apipie.historyButtonClicked", () => {
 			sidebarProvider.postMessageToWebview({
 				type: "action",
 				action: "historyButtonClicked",
+			})
+		}),
+	)
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand("cline-apipie.accountLoginClicked", () => {
+			sidebarProvider.postMessageToWebview({
+				type: "action",
+				action: "accountLoginClicked",
 			})
 		}),
 	)
@@ -126,6 +139,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// URI Handler
 	const handleUri = async (uri: vscode.Uri) => {
+		console.log("URI Handler called with:", {
+			path: uri.path,
+			query: uri.query,
+			scheme: uri.scheme,
+		})
+
 		const path = uri.path
 		const query = new URLSearchParams(uri.query.replace(/\+/g, "%2B"))
 		const visibleProvider = ClineProvider.getVisibleInstance()
@@ -140,6 +159,28 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 				break
 			}
+			case "/auth": {
+				const token = query.get("token")
+				const state = query.get("state")
+				const apiKey = query.get("apiKey")
+
+				console.log("Auth callback received:", {
+					token: token,
+					state: state,
+					apiKey: apiKey,
+				})
+
+				// Validate state parameter
+				if (!(await visibleProvider.validateAuthState(state))) {
+					vscode.window.showErrorMessage("Invalid auth state")
+					return
+				}
+
+				if (token && apiKey) {
+					await visibleProvider.handleAuthCallback(token, apiKey)
+				}
+				break
+			}
 			default:
 				break
 		}
@@ -151,5 +192,25 @@ export function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 export function deactivate() {
-	outputChannel.appendLine("Cline extension deactivated")
+	telemetryService.shutdown()
+	Logger.log("Cline extension deactivated")
+}
+
+// TODO: Find a solution for automatically removing DEV related content from production builds.
+//  This type of code is fine in production to keep. We just will want to remove it from production builds
+//  to bring down built asset sizes.
+//
+// This is a workaround to reload the extension when the source code changes
+// since vscode doesn't support hot reload for extensions
+const { IS_DEV, DEV_WORKSPACE_FOLDER } = process.env
+
+if (IS_DEV && IS_DEV !== "false") {
+	assert(DEV_WORKSPACE_FOLDER, "DEV_WORKSPACE_FOLDER must be set in development")
+	const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(DEV_WORKSPACE_FOLDER, "src/**/*"))
+
+	watcher.onDidChange(({ scheme, path }) => {
+		console.info(`${scheme} ${path} changed. Reloading VSCode...`)
+
+		vscode.commands.executeCommand("workbench.action.reloadWindow")
+	})
 }
