@@ -21,14 +21,7 @@
 		"url": "https://github.com/neuronic-ai/cline-apipie.git"
 	},
 	"homepage": "https://apipie.ai",
-	"categories": [
-		"AI",
-		"Chat",
-		"Programming Languages",
-		"Education",
-		"Snippets",
-		"Testing"
-	],
+	"categories": ["AI", "Chat", "Programming Languages", "Education", "Snippets", "Testing"],
 	"keywords": [
 		"cline",
 		"claude",

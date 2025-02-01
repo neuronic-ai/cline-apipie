@@ -16,6 +16,7 @@ import { ApiStream } from "./transform/stream"
 export interface ApiHandler {
 	createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream
 	getModel(): { id: string; info: ModelInfo }
+	clearMemory?(sessionId: string): Promise<void>
 }
 
 export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
@@ -40,10 +41,10 @@ export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 		case "openai-native":
 			return new OpenAiNativeHandler(options)
 		case "apipie":
-			return new ApipieHandler(options)			
+			return new ApipieHandler(options)
 		case "deepseek":
 			return new DeepSeekHandler(options)
 		default:
-			return new AnthropicHandler(options)
+			return new ApipieHandler(options)
 	}
 }

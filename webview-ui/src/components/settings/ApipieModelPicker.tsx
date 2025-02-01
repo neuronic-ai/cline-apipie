@@ -9,11 +9,13 @@ import { ModelInfoView } from "./ApiOptions"
 const defaultProvider = "openai"
 const defaultModel = "gpt-4o"
 
-const ApipieModelPicker: React.FC = () => {
+interface ApipieModelPickerProps {
+	showModelDetails?: boolean
+}
+
+const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails = true }) => {
 	const { apiConfiguration, setApiConfiguration, apipieModels } = useExtensionState()
-	const [selectedModel, setSelectedModel] = useState(
-		apiConfiguration?.apiModelId || `${defaultProvider}/${defaultModel}`,
-	)
+	const [selectedModel, setSelectedModel] = useState(apiConfiguration?.apiModelId || `${defaultProvider}/${defaultModel}`)
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
 	useMount(() => {
@@ -186,17 +188,21 @@ const ApipieModelPicker: React.FC = () => {
 				</DropdownWrapper>
 			</div>
 
-			{selectedModelInfo ? (
-				<ModelInfoView
-					selectedModelId={selectedModel}
-					modelInfo={selectedModelInfo}
-					isDescriptionExpanded={isDescriptionExpanded}
-					setIsDescriptionExpanded={setIsDescriptionExpanded}
-				/>
-			) : (
-				<p style={{ fontSize: "12px", marginTop: 0, color: "var(--vscode-descriptionForeground)" }}>
-					Select a model from the dropdown above.
-				</p>
+			{showModelDetails && (
+				<>
+					{selectedModelInfo ? (
+						<ModelInfoView
+							selectedModelId={selectedModel}
+							modelInfo={selectedModelInfo}
+							isDescriptionExpanded={isDescriptionExpanded}
+							setIsDescriptionExpanded={setIsDescriptionExpanded}
+						/>
+					) : (
+						<p style={{ fontSize: "12px", marginTop: 0, color: "var(--vscode-descriptionForeground)" }}>
+							Select a model from the dropdown above.
+						</p>
+					)}
+				</>
 			)}
 		</>
 	)

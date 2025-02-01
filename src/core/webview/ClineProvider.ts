@@ -62,6 +62,11 @@ type GlobalStateKey =
 	| "openRouterModelId"
 	| "openRouterModelInfo"
 	| "autoApprovalSettings"
+	| "apipieMemory"
+	| "apipieMemorySession"
+	| "apipieMemoryExpire"
+	| "apipieMemoryMsgs"
+	| "apipieIntegrity"
 
 export const GlobalFileNames = {
 	apiConversationHistory: "api_conversation_history.json",
@@ -442,6 +447,12 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 							await this.updateGlobalState("azureApiVersion", azureApiVersion)
 							await this.updateGlobalState("openRouterModelId", openRouterModelId)
 							await this.updateGlobalState("openRouterModelInfo", openRouterModelInfo)
+							await this.updateGlobalState("apipieMemory", message.apiConfiguration.apipieMemory)
+							await this.updateGlobalState("apipieMemorySession", message.apiConfiguration.apipieMemorySession)
+							await this.updateGlobalState("apipieMemoryExpire", message.apiConfiguration.apipieMemoryExpire)
+							await this.updateGlobalState("apipieMemoryMsgs", message.apiConfiguration.apipieMemoryMsgs)
+							await this.updateGlobalState("apipieIntegrity", message.apiConfiguration.apipieIntegrity)
+
 							if (this.cline) {
 								this.cline.api = buildApiHandler(message.apiConfiguration)
 							}
@@ -568,6 +579,18 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 							await this.mcpHub?.restartConnection(message.text!)
 						} catch (error) {
 							console.error(`Failed to retry connection for ${message.text}:`, error)
+						}
+						break
+					}
+					case "clearMemory": {
+						console.log("[ClineProvider] Received clearMemory message with sessionId:", message.text)
+						const api = this.cline?.api
+						console.log("[ClineProvider] Current API handler:", api?.constructor.name)
+						if (api?.clearMemory) {
+							await api.clearMemory(message.text!)
+							console.log("[ClineProvider] clearMemory called on API handler")
+						} else {
+							console.log("[ClineProvider] No API handler or clearMemory not available")
 						}
 						break
 					}
@@ -1077,6 +1100,11 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			customInstructions,
 			taskHistory,
 			autoApprovalSettings,
+			apipieMemory,
+			apipieMemorySession,
+			apipieMemoryExpire,
+			apipieMemoryMsgs,
+			apipieIntegrity,
 		] = await Promise.all([
 			this.getGlobalState("apiProvider") as Promise<ApiProvider | undefined>,
 			this.getGlobalState("apiModelId") as Promise<string | undefined>,
@@ -1108,6 +1136,11 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 			this.getGlobalState("customInstructions") as Promise<string | undefined>,
 			this.getGlobalState("taskHistory") as Promise<HistoryItem[] | undefined>,
 			this.getGlobalState("autoApprovalSettings") as Promise<AutoApprovalSettings | undefined>,
+			this.getGlobalState("apipieMemory") as Promise<boolean | undefined>,
+			this.getGlobalState("apipieMemorySession") as Promise<string | undefined>,
+			this.getGlobalState("apipieMemoryExpire") as Promise<number | undefined>,
+			this.getGlobalState("apipieMemoryMsgs") as Promise<number | undefined>,
+			this.getGlobalState("apipieIntegrity") as Promise<number | undefined>,
 		])
 
 		let apiProvider: ApiProvider
@@ -1152,6 +1185,11 @@ export class ClineProvider implements vscode.WebviewViewProvider {
 				azureApiVersion,
 				openRouterModelId,
 				openRouterModelInfo,
+				apipieMemory,
+				apipieMemorySession,
+				apipieMemoryExpire,
+				apipieMemoryMsgs,
+				apipieIntegrity,
 			},
 			lastShownAnnouncementId,
 			customInstructions,

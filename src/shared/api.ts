@@ -24,7 +24,9 @@ export interface ApiHandlerOptions {
 	apipieMemory?: boolean
 	apipieMemorySession?: string
 	apipieMemoryExpire?: number
-	apipieIntegrity?: number	
+	apipieMemoryMsgs?: number
+	apipieClearMemory?: boolean
+	apipieIntegrity?: number
 	awsAccessKey?: string
 	awsSecretKey?: string
 	awsSessionToken?: string

@@ -1,4 +1,5 @@
 import {
+	VSCodeButton,
 	VSCodeCheckbox,
 	VSCodeDropdown,
 	VSCodeLink,
@@ -49,6 +50,7 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage }: 
 	const [anthropicBaseUrlSelected, setAnthropicBaseUrlSelected] = useState(!!apiConfiguration?.anthropicBaseUrl)
 	const [azureApiVersionSelected, setAzureApiVersionSelected] = useState(!!apiConfiguration?.azureApiVersion)
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+	const [isClearing, setIsClearing] = useState(false)
 
 	const handleInputChange = (field: keyof ApiConfiguration) => (event: any) => {
 		setApiConfiguration({
@@ -139,8 +141,8 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage }: 
 						position: "relative",
 						zIndex: OPENROUTER_MODEL_PICKER_Z_INDEX + 1,
 					}}>
-					<VSCodeOption value="openrouter">OpenRouter</VSCodeOption>
 					<VSCodeOption value="apipie">APIpie</VSCodeOption>
+					<VSCodeOption value="openrouter">OpenRouter</VSCodeOption>
 					<VSCodeOption value="anthropic">Anthropic</VSCodeOption>
 					<VSCodeOption value="gemini">Google Gemini</VSCodeOption>
 					<VSCodeOption value="deepseek">DeepSeek</VSCodeOption>
@@ -242,6 +244,129 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage }: 
 							</span>
 						)} */}
 					</p>
+					<div style={{ marginTop: "10px" }}>
+						<VSCodeCheckbox
+							checked={Boolean(apiConfiguration?.apipieMemory ?? true)}
+							onChange={(e: any) => {
+								const isChecked = Boolean(e.target.checked)
+								setApiConfiguration({
+									...apiConfiguration,
+									apipieMemory: isChecked,
+								})
+							}}>
+							Enable Memory
+						</VSCodeCheckbox>
+					</div>
+
+					{apiConfiguration?.apipieMemory !== false && apiConfiguration?.apipieMemory !== undefined && (
+						<div style={{ marginTop: "10px", display: "flex", gap: "5px", alignItems: "flex-start" }}>
+							<VSCodeTextField
+								value={
+									apiConfiguration?.apipieMemorySession === undefined
+										? "cline-1"
+										: apiConfiguration.apipieMemorySession
+								}
+								style={{ width: "90px !important" }}
+								title="Use a unique value if you are running multiple cline instances with the same apipie account."
+								onInput={handleInputChange("apipieMemorySession")}>
+								<span style={{ fontWeight: 500 }}>Session</span>
+							</VSCodeTextField>
+							<VSCodeTextField
+								value={
+									apiConfiguration?.apipieMemoryExpire === undefined
+										? "15"
+										: apiConfiguration.apipieMemoryExpire.toString()
+								}
+								style={{ width: "30px !important" }}
+								type="text"
+								title="Specify the number of minutes for old memories to be forgotten. Prevent old code from poisoning current code. max:1440"
+								onInput={handleInputChange("apipieMemoryExpire")}>
+								<span style={{ fontWeight: 500 }}>Expire</span>
+							</VSCodeTextField>
+							<VSCodeTextField
+								value={
+									apiConfiguration?.apipieMemoryMsgs === undefined
+										? "6"
+										: apiConfiguration.apipieMemoryMsgs.toString()
+								}
+								style={{ maxWidth: "30px !important" }}
+								type="text"
+								title="Maximum number of relevant past messages to add to the already existing prompts received"
+								onInput={handleInputChange("apipieMemoryMsgs")}>
+								<span style={{ fontWeight: 500 }}>mem_msgs</span>
+							</VSCodeTextField>
+						</div>
+					)}
+
+					{apiConfiguration?.apipieMemory !== false && apiConfiguration?.apipieMemory !== undefined && (
+						<div style={{ marginTop: "10px", width: "100%" }}>
+							<VSCodeButton
+								appearance="secondary"
+								style={{
+									width: "100%",
+									backgroundColor: isClearing ? "#225722" : "#5e091ef3",
+									borderColor: isClearing ? "#225722" : "#5e091ef3",
+									color: "white",
+								}}
+								onClick={() => {
+									const sessionId = apiConfiguration?.apipieMemorySession || "cline-1"
+									setIsClearing(true)
+
+									vscode.postMessage({
+										type: "clearMemory",
+										text: sessionId,
+									})
+									vscode.postMessage({
+										type: "showInformationMessage",
+										text: `Clearing memory for session ${sessionId}...`,
+									})
+
+									// Reset after 3 seconds
+									setTimeout(() => {
+										setIsClearing(false)
+									}, 3000)
+								}}>
+								{isClearing ? "Clearing Memory..." : "Clear Memory"}
+							</VSCodeButton>
+						</div>
+					)}
+
+					<div
+						style={{
+							height: "20px",
+							marginTop: "10px",
+							marginBottom: "10px",
+							display: "flex",
+							flexDirection: "column",
+							gap: "8px",
+							position: "relative",
+							zIndex: 1,
+						}}>
+						<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+							<span style={{ fontWeight: 500 }}>Integrity</span>
+							<label className="relative inline-flex items-center cursor-pointer">
+								<label
+									className="rocker-switch"
+									title="Return the best of two answers, improve your accuracy, eliminate hallucinations.">
+									<input
+										type="checkbox"
+										checked={apiConfiguration?.apipieIntegrity === 12}
+										onChange={(e) => {
+											const isChecked = e.target.checked
+											setApiConfiguration({
+												...apiConfiguration,
+												apipieIntegrity: isChecked ? 12 : 11,
+											})
+										}}
+										style={{ display: "none" }}
+									/>
+									<div className="rocker-switch-track">
+										<div className="rocker-switch-thumb" />
+									</div>
+								</label>
+							</label>
+						</div>
+					</div>
 				</div>
 			)}
 
@@ -801,20 +926,6 @@ export const ModelInfoView = ({
 			supportsLabel="Supports images"
 			doesNotSupportLabel="Does not support images"
 		/>,
-		<ModelInfoSupportsItem
-			key="supportsComputerUse"
-			isSupported={modelInfo.supportsComputerUse ?? false}
-			supportsLabel="Supports computer use"
-			doesNotSupportLabel="Does not support computer use"
-		/>,
-		!isGemini && (
-			<ModelInfoSupportsItem
-				key="supportsPromptCache"
-				isSupported={modelInfo.supportsPromptCache}
-				supportsLabel="Supports prompt caching"
-				doesNotSupportLabel="Does not support prompt caching"
-			/>
-		),
 		modelInfo.maxTokens !== undefined && modelInfo.maxTokens > 0 && (
 			<span key="maxTokens">
 				<span style={{ fontWeight: 500 }}>Max output:</span> {modelInfo.maxTokens?.toLocaleString()} tokens
@@ -965,5 +1076,64 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration) {
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 	}
 }
+
+// Add styles for the toggle switch
+const style = document.createElement("style")
+style.textContent = `
+	.rocker-switch {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		cursor: pointer;
+	}
+	
+	.rocker-switch-track {
+		width: 40px;
+		height: 20px;
+		background: var(--vscode-checkbox-background);
+		border-radius: 10px;
+		position: relative;
+		transition: all 0.2s ease;
+		box-shadow: inset 0 0 0 1px var(--vscode-checkbox-border);
+	}
+	
+	input:checked + .rocker-switch-track {
+		background: var(--vscode-button-background);
+		box-shadow: none;
+	}
+	
+	.rocker-switch-thumb {
+		width: 16px;
+		height: 16px;
+		background: var(--vscode-button-foreground);
+		border-radius: 50%;
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	}
+	
+	input:checked + .rocker-switch-track .rocker-switch-thumb {
+		transform: translateX(20px);
+		background: white;
+	}
+	
+	.rocker-switch-label {
+		margin-left: 8px;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--vscode-foreground);
+	}
+	
+	.rocker-switch:hover .rocker-switch-thumb {
+		background: var(--vscode-button-hoverBackground);
+	}
+	
+	input:checked + .rocker-switch-track:hover .rocker-switch-thumb {
+		background: var(--vscode-button-foreground);
+	}
+`
+document.head.appendChild(style)
 
 export default memo(ApiOptions)
