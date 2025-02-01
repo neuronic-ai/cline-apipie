@@ -21,6 +21,12 @@ export interface ApiHandlerOptions {
 	apipieApiKey?: string
 	apipieModelProvider?: string
 	apipieModelInfo?: ModelInfo
+	apipieMemory?: boolean
+	apipieMemorySession?: string
+	apipieMemoryExpire?: number
+	apipieMemoryMsgs?: number
+	apipieClearMemory?: boolean
+	apipieIntegrity?: number
 	awsAccessKey?: string
 	awsSecretKey?: string
 	awsSessionToken?: string

@@ -37,6 +37,7 @@ export const MAX_IMAGES_PER_MESSAGE = 20 // Anthropic limits to 20 images
 
 const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryView }: ChatViewProps) => {
 	const { version, clineMessages: messages, taskHistory, apiConfiguration } = useExtensionState()
+	const showApipieToolbar = apiConfiguration?.apiProvider === "apipie"
 
 	//const task = messages.length > 0 ? (messages[0].say === "task" ? messages[0] : undefined) : undefined) : undefined
 	const task = useMemo(() => messages.at(0), [messages]) // leaving this less safe version here since if the first message is not a task, then the extension is in a bad state and needs to be debugged (see Cline.abort)
@@ -704,7 +705,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		<div
 			style={{
 				position: "fixed",
-				top: 0,
+				top: showApipieToolbar ? "var(--apipie-toolbar-height, 70px)" : 0,
 				left: 0,
 				right: 0,
 				bottom: 0,
@@ -735,17 +736,17 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 					}}>
 					{showAnnouncement && <Announcement version={version} hideAnnouncement={hideAnnouncement} />}
 					<div style={{ padding: "0 20px", flexShrink: 0 }}>
-					<h2>What are we doing here?</h2>
+						<h2>What are we doing here?</h2>
 						<p>
 							<p>
-								This is a fork of Cline, made for APIpie.ai API. This may be merged into the main
-								project at some point. We have more updates coming to truly take advantage of APIpie's
-								features & services with Cline.
+								This is a fork of Cline, made for APIpie.ai API. This may be merged into the main project at some
+								point. We have more updates coming to truly take advantage of APIpie's features & services with
+								Cline.
 							</p>
 
 							<b>
-								You need to configure an APIpie API key if you have not already. You could also
-								configure some other API key but why not use Cline proper then.{" "}
+								You need to configure an APIpie API key if you have not already. You could also configure some
+								other API key but why not use Cline proper then.{" "}
 							</b>
 						</p>
 					</div>

@@ -19,7 +19,7 @@ interface ApipieStreamResponse extends Omit<OpenAI.Chat.ChatCompletionChunk, "us
 interface ApipieModel {
 	enabled: number
 	available: number
-	type: string
+	modelType: string
 	subtype: string
 	provider: string
 	id: string
@@ -30,14 +30,6 @@ interface ApipieModel {
 	max_response_tokens: number
 	input_cost: number
 	output_cost: number
-}
-
-interface ChatCompletionCreateParams {
-	model: string
-	messages: OpenAI.Chat.ChatCompletionMessageParam[]
-	temperature?: number
-	stream?: boolean
-	tools_model?: string // Added tools_model property
 }
 
 export class ApipieHandler implements ApiHandler {
@@ -52,6 +44,37 @@ export class ApipieHandler implements ApiHandler {
 			baseURL: "https://apipie.ai/v1",
 			apiKey: this.options.apipieApiKey,
 		})
+	}
+
+	async clearMemory(sessionId: string): Promise<void> {
+		console.log("[APIpie] clearMemory called with sessionId:", sessionId)
+		const data = {
+			memory: true,
+			mem_clear: 1,
+			mem_session: sessionId,
+			model: "openai/gpt-4o",
+			max_tokens: 100,
+			messages: [{ role: "user", content: "clear" }],
+		}
+		console.log("[APIpie] Making clear memory request with data:", data)
+		try {
+			const response = await fetch("https://apipie.ai/v1/chat/completions", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-API-Key": this.options.apipieApiKey || "",
+				},
+				body: JSON.stringify(data),
+			})
+			const responseData = await response.text()
+			console.log("[APIpie] Clear memory response:", response.status, responseData)
+			if (!response.ok) {
+				throw new Error(`Failed to clear memory: ${response.status} ${responseData}`)
+			}
+		} catch (error) {
+			console.error("[APIpie] Error clearing memory:", error)
+			throw error
+		}
 	}
 
 	async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
@@ -80,24 +103,30 @@ export class ApipieHandler implements ApiHandler {
 			}
 		}
 
-		const stream = await this.client.chat.completions.create({
+		// @ts-ignore-next-line
+		const stream = (await this.client.chat.completions.create({
 			model: `${this.modelInfo.provider}/${this.modelInfo.id}`,
 			messages: openAiMessages,
 			temperature: 0,
 			stream: true,
 			stream_options: { include_usage: true },
-		})
+			memory: this.options.apipieMemory ?? true,
+			mem_session: this.options.apipieMemorySession || "cline-1",
+			mem_expire: this.options.apipieMemoryExpire || 15,
+			mem_msgs: this.options.apipieMemoryMsgs || 6,
+			...(this.options.apipieClearMemory ? { mem_clear: 1 } : {}),
+			integrity: this.options.apipieIntegrity || 11,
+		})) as AsyncIterable<OpenAI.Chat.ChatCompletionChunk>
 
 		for await (const chunk of stream) {
 			const apipieChunk = chunk as ApipieStreamResponse
-			const delta = apipieChunk.choices[0]?.delta
+			const delta = chunk.choices[0]?.delta
 			if (delta?.content) {
 				yield {
 					type: "text",
 					text: delta.content,
 				}
 			}
-
 			if (apipieChunk.usage) {
 				yield {
 					type: "usage",
@@ -116,7 +145,7 @@ export class ApipieHandler implements ApiHandler {
 				maxTokens: this.modelInfo?.max_tokens || 128000,
 				contextWindow: this.modelInfo?.max_response_tokens || 8192,
 				supportsImages: false,
-				supportsPromptCache: false,
+				supportsPromptCache: true,
 				inputPrice: this.modelInfo?.input_cost || 0,
 				outputPrice: this.modelInfo?.output_cost || 0,
 				description: this.modelInfo?.description,

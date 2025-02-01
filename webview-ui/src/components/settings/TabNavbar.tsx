@@ -1,5 +1,7 @@
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import React, { useState } from "react"
+import { useExtensionState } from "../../context/ExtensionStateContext"
+import ApipieToolbar from "./ApipieToolbar"
 
 export const TAB_NAVBAR_HEIGHT = 24
 const BUTTON_MARGIN_RIGHT = "3px"
@@ -118,6 +120,9 @@ const TabNavbar = ({ onPlusClick, onHistoryClick, onSettingsClick }: TabNavbarPr
 		marginRight: LAST_BUTTON_MARGIN_RIGHT,
 	}
 
+	const { apiConfiguration } = useExtensionState()
+	const showApipieToolbar = apiConfiguration?.apiProvider === "apipie"
+
 	return (
 		<>
 			<div
@@ -160,6 +165,7 @@ const TabNavbar = ({ onPlusClick, onHistoryClick, onSettingsClick }: TabNavbarPr
 				</VSCodeButton>
 			</div>
 			<Tooltip {...tooltip} />
+			{showApipieToolbar && <ApipieToolbar />}
 		</>
 	)
 }
