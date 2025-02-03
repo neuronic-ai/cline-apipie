@@ -1,39 +1,30 @@
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
-import React from "react"
+import React, { useMemo, useState } from "react"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import { vscode } from "../../utils/vscode"
 import ApipieModelPicker from "./ApipieModelPicker"
+import { normalizeApiConfiguration } from "./ApiOptions"
 
 const ApipieToolbar = () => {
 	const { apiConfiguration, setApiConfiguration } = useExtensionState()
-	const [isClearing, setIsClearing] = React.useState(false)
+	const [isClearing, setIsClearing] = useState(false)
 
-	// Ensure provider is always apipie when toolbar is visible
-	React.useEffect(() => {
-		if (apiConfiguration && apiConfiguration.apiProvider !== "apipie") {
-			const currentModel = apiConfiguration.apiModelId
-			setApiConfiguration({
-				...apiConfiguration,
-				apiProvider: "apipie",
-				// Keep current model if it exists, otherwise use default
-				apiModelId: currentModel || "openai/gpt-4o",
-			})
+	const updateConfiguration = (updates: Partial<typeof apiConfiguration>) => {
+		const newConfig = {
+			...apiConfiguration,
+			...updates,
 		}
-	}, [apiConfiguration?.apiProvider])
-
-	// Sync model changes
-	React.useEffect(() => {
-		const currentModel = apiConfiguration?.apiModelId
-		if (currentModel && apiConfiguration?.apiProvider === "apipie") {
-			vscode.postMessage({
-				type: "refreshApipieModels",
-			})
-		}
-	}, [apiConfiguration?.apiModelId])
+		setApiConfiguration(newConfig)
+		// Sync changes with extension
+		vscode.postMessage({
+			type: "apiConfiguration",
+			apiConfiguration: newConfig,
+		})
+	}
 
 	const handleIntegrityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const isChecked = event.target.checked
-		setApiConfiguration({
+		updateConfiguration({
 			...apiConfiguration,
 			apipieIntegrity: isChecked ? 12 : 11,
 		})
@@ -41,7 +32,7 @@ const ApipieToolbar = () => {
 
 	const handleMemoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const isChecked = event.target.checked
-		setApiConfiguration({
+		updateConfiguration({
 			...apiConfiguration,
 			apipieMemory: isChecked,
 		})

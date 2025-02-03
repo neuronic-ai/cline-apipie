@@ -53,7 +53,6 @@ export class ApipieHandler implements ApiHandler {
 			mem_clear: 1,
 			mem_session: sessionId,
 			model: "openai/gpt-4o",
-			max_tokens: 100,
 			messages: [{ role: "user", content: "clear" }],
 		}
 		console.log("[APIpie] Making clear memory request with data:", data)
@@ -85,7 +84,7 @@ export class ApipieHandler implements ApiHandler {
 
 		// Fetch model info if we haven't already
 		if (!this.modelInfo) {
-			const response = await fetch("https://apipie.ai/v1/models?subtype=chatx,meta,code", {
+			const response = await fetch("https://apipie.ai/v1/models", {
 				headers: {
 					"X-API-Key": this.options.apipieApiKey || "",
 				},

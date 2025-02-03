@@ -246,7 +246,7 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage }: 
 					</p>
 					<div style={{ marginTop: "10px" }}>
 						<VSCodeCheckbox
-							checked={Boolean(apiConfiguration?.apipieMemory ?? true)}
+							checked={Boolean(apiConfiguration?.apipieMemory ?? false)}
 							onChange={(e: any) => {
 								const isChecked = Boolean(e.target.checked)
 								setApiConfiguration({
