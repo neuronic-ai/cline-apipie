@@ -32,14 +32,14 @@ const WelcomeView = () => {
 			}}>
 			<h2>Hi, I'm Cline-APIpie</h2>
 			<p>
-				This is a fork of Cline, made for APIpie.ai API. This may be merged into the main project at some point.
-				We have more updates coming to truly take advantage of APIpie's features and services with Cline to
-				really empower the developer.
+				This is a fork of Cline, made for APIpie.ai API. This may be merged into the main project at some point. We have
+				more updates coming to truly take advantage of APIpie's features and services with Cline to really empower the
+				developer.
 			</p>
 
 			<b>
-				You need to configure an APIpie API key if you have not already. You could also configure some other API
-				key but why not use Cline proper then.{" "}
+				You need to configure an APIpie API key if you have not already. You could also configure some other API key but
+				why not use Cline proper then.{" "}
 			</b>
 
 			<div style={{ marginTop: "10px" }}>

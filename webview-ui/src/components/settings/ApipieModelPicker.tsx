@@ -1,10 +1,12 @@
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import Fuse from "fuse.js"
 import React, { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 import { useMount } from "react-use"
 import styled from "styled-components"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 import { vscode } from "../../utils/vscode"
-import { ModelInfoView } from "./ApiOptions"
+import { highlight } from "../history/HistoryView"
+import { ModelInfoView, normalizeApiConfiguration } from "./ApiOptions"
 
 const defaultProvider = "openai"
 const defaultModel = "gpt-4o"
@@ -15,7 +17,7 @@ interface ApipieModelPickerProps {
 
 const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails = true }) => {
 	const { apiConfiguration, setApiConfiguration, apipieModels } = useExtensionState()
-	const [selectedModel, setSelectedModel] = useState(apiConfiguration?.apiModelId || `${defaultProvider}/${defaultModel}`)
+	const [searchTerm, setSearchTerm] = useState(apiConfiguration?.apiModelId || `${defaultProvider}/${defaultModel}`)
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
 	useMount(() => {
@@ -23,7 +25,9 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 	})
 
 	useEffect(() => {
-		console.log("Fetched apipieModels:", apipieModels)
+		if (apipieModels && !apipieModels[searchTerm]) {
+			handleModelChange(Object.keys(apipieModels)[0] || `${defaultProvider}/${defaultModel}`)
+		}
 	}, [apipieModels])
 
 	const [isDropdownVisible, setIsDropdownVisible] = useState(false)
@@ -32,13 +36,26 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 	const itemRefs = useRef<(HTMLDivElement | null)[]>([])
 	const dropdownListRef = useRef<HTMLDivElement>(null)
 
+	// Simple model selection handler - matches OpenAI module pattern
 	const handleModelChange = (newModelId: string) => {
-		setApiConfiguration({
+		const newConfig = {
 			...apiConfiguration,
-			apiModelId: newModelId,
-			apiProvider: "apipie",
+			apiProvider: "apipie" as const,
+			apiModelId: newModelId
+		}
+		setApiConfiguration(newConfig)
+		// Sync changes with extension
+		vscode.postMessage({
+			type: "apiConfiguration",
+			apiConfiguration: newConfig,
 		})
-		setSelectedModel(newModelId)
+		setSearchTerm(newModelId)
+	}
+
+	// Separate handler for search functionality
+	const handleSearchInput = (value: string) => {
+		setSearchTerm(value)
+		setIsDropdownVisible(true)
 	}
 
 	useEffect(() => {
@@ -54,19 +71,39 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 		}
 	}, [])
 
-	const filteredModelIds = useMemo(() => {
-		return Object.keys(apipieModels || {})
-			.filter((model) => model.toLowerCase().includes(selectedModel.toLowerCase()))
-			.sort((a, b) => a.localeCompare(b))
-	}, [apipieModels, selectedModel])
+	const searchableItems = useMemo(() => {
+		return Object.keys(apipieModels || {}).map((id) => ({
+			id,
+			html: id,
+		}))
+	}, [apipieModels])
+
+	const fuse = useMemo(() => {
+		return new Fuse(searchableItems, {
+			keys: ["html"],
+			threshold: 0.6,
+			shouldSort: true,
+			isCaseSensitive: false,
+			ignoreLocation: false,
+			includeMatches: true,
+			minMatchCharLength: 1,
+		})
+	}, [searchableItems])
+
+	const modelSearchResults = useMemo(() => {
+		let results: { id: string; html: string }[] = searchTerm
+			? highlight(fuse.search(searchTerm), "model-item-highlight")
+			: searchableItems
+		return results
+	}, [searchableItems, searchTerm, fuse])
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-		if (!isDropdownVisible || filteredModelIds.length === 0) return
+		if (!isDropdownVisible || modelSearchResults.length === 0) return
 
 		switch (event.key) {
 			case "ArrowDown":
 				event.preventDefault()
-				setSelectedIndex((prev) => (prev < filteredModelIds.length - 1 ? prev + 1 : prev))
+				setSelectedIndex((prev) => (prev < modelSearchResults.length - 1 ? prev + 1 : prev))
 				break
 			case "ArrowUp":
 				event.preventDefault()
@@ -74,8 +111,8 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 				break
 			case "Enter":
 				event.preventDefault()
-				if (selectedIndex >= 0 && selectedIndex < filteredModelIds.length) {
-					handleModelChange(filteredModelIds[selectedIndex])
+				if (selectedIndex >= 0 && selectedIndex < modelSearchResults.length) {
+					handleModelChange(modelSearchResults[selectedIndex].id)
 					setIsDropdownVisible(false)
 				}
 				break
@@ -91,7 +128,7 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 		if (dropdownListRef.current) {
 			dropdownListRef.current.scrollTop = 0
 		}
-	}, [selectedModel])
+	}, [searchTerm])
 
 	useEffect(() => {
 		if (selectedIndex >= 0 && itemRefs.current[selectedIndex]) {
@@ -102,25 +139,9 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 		}
 	}, [selectedIndex])
 
-	const normalizeApipieModelInfo = (modelData: any) => {
-		return {
-			maxTokens: modelData.max_tokens,
-			contextWindow: modelData.max_response_tokens,
-			supportsImages: false,
-			supportsComputerUse: false,
-			supportsPromptCache: false,
-			inputPrice: modelData.input_cost,
-			outputPrice: modelData.output_cost,
-			description: modelData.description,
-		}
-	}
-
-	const selectedModelInfo = useMemo(() => {
-		if (!apipieModels) return null
-		const modelData = apipieModels[selectedModel]
-		if (!modelData) return null
-		return normalizeApipieModelInfo(modelData)
-	}, [apipieModels, selectedModel])
+	const { selectedModelId, selectedModelInfo } = useMemo(() => {
+		return normalizeApiConfiguration(apiConfiguration)
+	}, [apiConfiguration])
 
 	return (
 		<>
@@ -140,20 +161,20 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 					<VSCodeTextField
 						id="model-search"
 						placeholder="Search and select a model..."
-						value={selectedModel}
+						value={searchTerm}
 						onInput={(e) => {
-							handleModelChange((e.target as HTMLInputElement)?.value?.toLowerCase())
+							handleSearchInput((e.target as HTMLInputElement)?.value?.toLowerCase())
 							setIsDropdownVisible(true)
 						}}
 						onFocus={() => setIsDropdownVisible(true)}
 						onKeyDown={handleKeyDown}
 						style={{ width: "100%", zIndex: APIPIE_MODEL_PICKER_Z_INDEX, position: "relative" }}>
-						{selectedModel && (
+						{searchTerm && (
 							<div
 								className="input-icon-button codicon codicon-close"
 								aria-label="Clear search"
 								onClick={() => {
-									handleModelChange("")
+									handleSearchInput("")
 									setIsDropdownVisible(true)
 								}}
 								slot="end"
@@ -168,18 +189,18 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 					</VSCodeTextField>
 					{isDropdownVisible && (
 						<DropdownList ref={dropdownListRef}>
-							{filteredModelIds.map((model, index) => (
+							{modelSearchResults.map((item, index) => (
 								<DropdownItem
-									key={model}
+									key={item.id}
 									ref={(el) => (itemRefs.current[index] = el)}
 									isSelected={index === selectedIndex}
 									onMouseEnter={() => setSelectedIndex(index)}
 									onClick={() => {
-										handleModelChange(model)
+										handleModelChange(item.id)
 										setIsDropdownVisible(false)
 									}}
 									dangerouslySetInnerHTML={{
-										__html: model,
+										__html: item.html,
 									}}
 								/>
 							))}
@@ -192,7 +213,7 @@ const ApipieModelPicker: React.FC<ApipieModelPickerProps> = ({ showModelDetails 
 				<>
 					{selectedModelInfo ? (
 						<ModelInfoView
-							selectedModelId={selectedModel}
+							selectedModelId={selectedModelId}
 							modelInfo={selectedModelInfo}
 							isDescriptionExpanded={isDescriptionExpanded}
 							setIsDescriptionExpanded={setIsDescriptionExpanded}

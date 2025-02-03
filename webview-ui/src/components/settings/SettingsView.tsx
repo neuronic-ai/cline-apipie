@@ -144,8 +144,8 @@ const SettingsView = ({ onDone }: SettingsViewProps) => {
 							padding: 0,
 						}}>
 						If you have any questions or feedback, feel free to open an issue at{" "}
-						<VSCodeLink href="https://github.com/cline/cline" style={{ display: "inline" }}>
-							https://github.com/cline/cline
+						<VSCodeLink href="https://github.com/neuronic-ai/cline-apipie" style={{ display: "inline" }}>
+							https://github.com/neuronic-ai/cline-apipie
 						</VSCodeLink>
 					</p>
 					<p

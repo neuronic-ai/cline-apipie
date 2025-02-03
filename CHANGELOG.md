@@ -1,5 +1,9 @@
 # Change Log
 
+## [3.1.31]
+
+- Added APIpie provider and features
+
 ## [3.1.2]
 
 - Fix issue where LFS files would be not be ignored when creating checkpoints

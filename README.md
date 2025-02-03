@@ -1,4 +1,4 @@
-# Cline (prev. Claude Dev) – \#1 on OpenRouter
+# Cline (prev. Claude Dev) – \ SUPER POWERED by APIpie
 
 <p align="center">
   <img src="https://media.githubusercontent.com/media/cline/cline/main/assets/docs/demo.gif" width="100%" />
